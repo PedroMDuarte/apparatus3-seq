@@ -4,15 +4,24 @@
 """
 __author__ = "Pedro M Duarte"
 
+import sys
+import os
+sys.path.append( os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] )
+import seqconf
+for p in seqconf.import_paths():
+	print "...adding path " + p
+	sys.path.append(p)
+
+
 import time
 t0=time.time()
 
 print "\n----- odt_dbz.py -----"
 
 import sys, math
-sys.path.append('L:/software/apparatus3/seq/utilspy')
-sys.path.append('L:/software/apparatus3/seq/seqspy')
-sys.path.append('L:/software/apparatus3/convert')
+ 
+ 
+ 
 import seq, wfm, gen, cnc, highfield_uvmot, odt, andor
 
 global report
@@ -102,7 +111,9 @@ s.digichg('odtttl',0)
 s.digichg('odt7595',0)
 
 
-s.save('L:/software/apparatus3/seq/seqstxt/expseq.txt')
+import seqconf
+s.save( seqconf.seqtxtout() )
+s.save( __file__.split('.')[0]+'.txt')
 s.clear_disk()
 
 print '...Compilation = %.2f seconds\n' % (time.time()-t0)

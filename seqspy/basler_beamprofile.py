@@ -6,14 +6,28 @@
 __author__ = "Pedro M Duarte"
 __version__ = "$Revision: 0.5 $"
 
+import pprint
+import sys
+import os
+sys.path.append( os.path.split(os.path.dirname(os.path.realpath(__file__)))[0] )
+import seqconf
+for p in seqconf.import_paths():
+	print "...adding path " + p
+	sys.path.append(p)
+
+
 import time
 t0=time.time()
 
-import sys, math
-sys.path.append('L:/software/apparatus3/seq/utilspy')
-sys.path.append('L:/software/apparatus3/seq/seqspy')
-sys.path.append('L:/software/apparatus3/convert')
-import seq, wfm, gen, cnc, basler
+
+import math
+
+try:
+  import seq, wfm, gen, cnc, basler
+except:
+  print "Could not import"
+  exit(1)
+
 
 
 #PARAMETERS
@@ -41,6 +55,7 @@ s=basler.BaslerBackground(s,preexp,texp,postexp)
 s.wait(800.0)
 s=gen.shutdown(s)
 s.digichg(probe,1)
-s.save('L:/software/apparatus3/seq/seqstxt/expseq.txt')
-        
+import seqconf
+s.save( seqconf.seqtxtout() )
+s.save( __file__.split('.')[0]+'.txt')
 print time.time()-t0," seconds"

@@ -10,17 +10,11 @@ def f(sec,key):
 	global report
 	return float(report[sec][key])
 
+#GET SECTION CONTENTS
+uvsec  = gen.getsection('UV')
+
 def uvRamps(motpow, bfield, ENDCNC):
 	ss=f('CNC','cncstepsize')
-	
-	#---Put pulse on uvfppiezo
-	uvfppiezo= wfm.wave('uvfppiezo',0.0,ss)
-	uvfppiezo.extend( ENDCNC)
-	uvfppiezo.linear( f('UV','pulsedet'), 0.0)	
-	uvfppiezo.appendhold( f('UV','dtpulse'))
-	uvfppiezo.linear( 0.0, f('UV','dtpulseramp'))
-	#uvfppiezo.dither( f('UV','dtpulse'), 3)
-	#uvfppiezo.lineardither( 0.0, f('UV','dtpulseramp'),3)
 
 
 	uvdt = f('UV','dt')
@@ -31,25 +25,38 @@ def uvRamps(motpow, bfield, ENDCNC):
 	dtload = f('UV','dtload_bfield')
 	dtcnc = f('UV','dtcnc_bfield')
 	uvhold = f('UV','uvhold')
-	bfield.linear(  f('UV','uvbfield'), uvdt)
-	bfield.appendhold(dtload)
-	bfield.linear( f('UV','uvbfieldf'), dtcnc)
+	
+	#OBSOLETE
+	#bfield.linear(  f('UV','uvbfield'), uvdt)
+	#bfield.appendhold(dtload)
+	#bfield.linear( f('UV','uvbfieldf'), dtcnc)
+	
+	bfield.linear(  uvsec.uvbfield, uvsec.dt)
+	bfield.appendhold( uvsec.dtload_bfield)
+	bfield.linear(  uvsec.uvbfieldf, uvsec.dtcnc_bfield) 
+	
+
+	#OBSOLETE
 	#bfield.appendhold(uvhold)	
 	
 	ENDUVMOT = max( motpow.dt(), bfield.dt() )
 	
 	#---UVPOW ramps
-	dtload_uvpow = f('UV','dtload_uvpow')
-	dtcnc_uvpow = f('UV','dtcnc_uvpow')
+	
+	#OBSOLETE
+	#dtload_uvpow = f('UV','dtload_uvpow')
+	#dtcnc_uvpow = f('UV','dtcnc_uvpow')
+	
+	
 	#
 	uvpow= wfm.wave('uvpow', f('UV','uvpow'),ss)
 	uvpow2= wfm.wave('uvpow2',f('UV','uvpow2'),ss)
 	#
-	uvpow.extend(ENDCNC+uvdt+dtload)
-	uvpow2.extend(ENDCNC+uvdt+dtload)
+	uvpow.extend( ENDCNC + uvsec.dt + uvsec.dtload_uvpow)
+	uvpow2.extend(ENDCNC + uvsec.dt + uvsec.dtload_uvpow)
 	#
-	uvpow.linear( f('UV','uvpowf'), dtcnc_uvpow)
-	uvpow2.linear( f('UV','uvpow2f') , dtcnc_uvpow)	
+	uvpow.linear( f('UV','uvpowf'), uvsec.dtcnc_uvpow)
+	uvpow2.linear( f('UV','uvpow2f') , uvsec.dtcnc_uvpow)	
 	
 	#---ENDUVMOT is defined as the point where the longest of bfield 
 	#---or uvpow ramps ends
@@ -59,13 +66,12 @@ def uvRamps(motpow, bfield, ENDCNC):
 	uvpow.extend(ENDUVMOT)
 	uvpow2.extend(ENDUVMOT)	
 	
-	uvfppiezo.extend(ENDUVMOT)
 	motpow.extend(ENDUVMOT)
 	bfield.extend(ENDUVMOT)
 	uvpow.extend(ENDUVMOT)
 	uvpow2.extend(ENDUVMOT)
 
-	return uvfppiezo, uvpow2, uvpow, motpow, bfield, ENDUVMOT
+	return uvpow2, uvpow, motpow, bfield, ENDUVMOT
 	
 def run(s,camera):
 	global report
@@ -76,7 +82,7 @@ def run(s,camera):
 	motpow, repdet, trapdet, reppow, trappow, bfield, ENDCNC = cnc.cncRamps()
 	
 	# Load UVMOT from CNCMOT
-	uvfppiezo, uvpow2, uvpow, motpow, bfield, ENDUVMOT = uvRamps(motpow, bfield, ENDCNC)
+	uvpow2, uvpow, motpow, bfield, ENDUVMOT = uvRamps(motpow, bfield, ENDCNC)
 
 	repdet.extend(ENDUVMOT)
 	trapdet.extend(ENDUVMOT)
@@ -87,13 +93,12 @@ def run(s,camera):
 	# Imaging
 	motpow, repdet, trapdet, reppow, trappow, bfield, maxDT = cnc.imagingRamps(motpow, repdet, trapdet, reppow, trappow, bfield,camera)
 
-	uvfppiezo.extend(maxDT)
 	uvpow.extend(maxDT)
 	uvpow2.extend(maxDT)
 	
 	
 	#---Add waveforms to sequence
-	s.analogwfm_add(ss,[ motpow, repdet, trapdet, bfield, reppow, trappow, uvfppiezo, uvpow, uvpow2])
+	s.analogwfm_add(ss,[ motpow, repdet, trapdet, bfield, reppow, trappow, uvpow, uvpow2])
 	
 	#wait normally rounds down using floor, here the duration is changed before so that
 	#the wait is rounded up
